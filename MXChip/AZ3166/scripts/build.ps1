@@ -40,8 +40,16 @@ if (!(Test-Path $BUILD_DIR)) {
 
 Push-Location $BUILD_DIR
 
-# Reconfigure if CMakeCache.txt or build.ninja is missing, or if forced
-if (!(Test-Path "CMakeCache.txt") -or !(Test-Path "build.ninja") -or $Rebuild) {
+# Reconfigure when the requested application differs from the cached one.
+$cachedConfig = $null
+if (Test-Path "CMakeCache.txt") {
+    $cacheEntry = Get-Content "CMakeCache.txt" | Where-Object { $_ -match '^APP_CONFIG:[^=]*=' } | Select-Object -First 1
+    if ($cacheEntry -match '^APP_CONFIG:[^=]*=(.*)$') {
+        $cachedConfig = $Matches[1]
+    }
+}
+
+if (!(Test-Path "CMakeCache.txt") -or !(Test-Path "build.ninja") -or $Rebuild -or $cachedConfig -ne $Config) {
     Write-Host "[INFO] Configuring CMake..."
     cmake -G Ninja `
         "-DCMAKE_BUILD_TYPE=Release" `

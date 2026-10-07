@@ -63,6 +63,14 @@ elseif(APP_CONFIG STREQUAL "mqtt")
         ${CONFIG_DIR}/main.c
         ${CONFIG_DIR}/cloud_config.h
     )
+elseif(APP_CONFIG STREQUAL "someip")
+    list(APPEND SOURCES
+        ${COMMON_DIR}/board_init.c
+        ${COMMON_DIR}/screen.c
+        ${CONFIG_DIR}/someip.c
+        ${CONFIG_DIR}/main.c
+        ${CONFIG_DIR}/cloud_config.h
+    )
 else() # starter
     list(APPEND SOURCES
         ${COMMON_DIR}/board_init.c
@@ -91,6 +99,10 @@ target_include_directories(${PROJECT_NAME}
         ${COMMON_DIR}
         ${CONFIG_DIR}
 )
+
+if(APP_CONFIG STREQUAL "someip" AND EXISTS "${CONFIG_DIR}/cloud_config.local.h")
+    target_compile_definitions(${PROJECT_NAME} PRIVATE SOMEIP_LOCAL_CONFIG)
+endif()
 
 if(APP_CONFIG STREQUAL "mqtt")
     # Also include telemetry directory for MQTT

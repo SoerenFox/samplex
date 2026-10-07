@@ -42,8 +42,13 @@ fi
 # Navigate to build directory
 cd "${BUILD_DIR}"
 
-# Check if CMakeCache exists for incremental build
-if [ ! -f "CMakeCache.txt" ] || [ ! -f "build.ninja" ] || [ "$2" == "rebuild" ]; then
+# Reconfigure when the requested application differs from the cached one.
+CACHED_CONFIG=""
+if [ -f "CMakeCache.txt" ]; then
+    CACHED_CONFIG=$(sed -n 's/^APP_CONFIG:[^=]*=//p' CMakeCache.txt | head -n 1)
+fi
+
+if [ ! -f "CMakeCache.txt" ] || [ ! -f "build.ninja" ] || [ "$2" == "rebuild" ] || [ "${CACHED_CONFIG}" != "${CONFIG}" ]; then
     echo "[INFO] Configuring CMake..."
     cmake -G Ninja \
         "-DCMAKE_BUILD_TYPE=Release" \

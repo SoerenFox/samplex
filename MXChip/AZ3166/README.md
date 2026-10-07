@@ -112,7 +112,7 @@ winget install --id=Kitware.CMake  -e
 To compile the application, use the provided scripts in the `MXChip/AZ3166/scripts` folder.
 
 ### Windows (PowerShell)
-You can build the application using `build.ps1`. It accepts a `-Config` parameter to select the application version (`starter`, `arcade`, `telemetry`, or `mqtt`).
+You can build the application using `build.ps1`. It accepts a `-Config` parameter to select the application version (`starter`, `arcade`, `telemetry`, `mqtt`, or `someip`).
 ```powershell
 .\scripts\build.ps1 -Config starter
 ```
@@ -177,7 +177,45 @@ The application supports multiple configurations that you can select at build ti
 - `starter`: Initiates the board and WiFi connectivity.
 - `telemetry`: Adds code to read the on-board sensors and print the output.
 - `mqtt`: Adds code to publish the telemetry over MQTT. Also creates a second thread subscribing to an MQTT topic; the received messages will be printed. (Note: This configuration builds upon `telemetry`).
+- `someip`: Periodically publishes the HTS221 temperature as a SOME/IP notification over UDP.
 - `arcade`: A collection of arcade games. Thanks to Sébastien Heurtematte for this contribution!
+
+### SOME/IP temperature publisher
+
+Build and deploy this configuration with `./scripts/build.sh someip` on Linux/macOS
+or `.\scripts\build.ps1 -Config someip` on Windows. Configure the Wi-Fi and
+destination values in `MXChip/AZ3166/app/someip/cloud_config.h`. To keep local
+Wi-Fi credentials out of source control, create a `cloud_config.local.h` in the
+same directory; when present, its definitions override the defaults. For example:
+
+```c
+#define WIFI_SSID "your-2.4-GHz-SSID"
+#define WIFI_PASSWORD "your-Wi-Fi-password"
+#define WIFI_MODE WPA2_PSK_AES
+#define SOMEIP_BRIDGE_IP_ADDRESS IP_ADDRESS(192, 168, 1, 100)
+#define SOMEIP_BRIDGE_PORT 30501
+```
+
+`cloud_config.local.h` is a machine-local configuration file and should not be
+committed. Alternatively, edit the default `cloud_config.h` definitions directly:
+
+- Set `WIFI_SSID`, `WIFI_PASSWORD`, and `WIFI_MODE` for the board's 2.4 GHz network.
+- Set `SOMEIP_BRIDGE_IP_ADDRESS` to the receiver's IPv4 address using
+  `IP_ADDRESS(a, b, c, d)` notation. The default is the subnet broadcast address
+  `192.168.88.255`; confirm that the receiver/network permits directed broadcasts.
+- Set `SOMEIP_BRIDGE_PORT` if needed; its default is `30511`.
+
+The build scripts automatically reconfigure the cached CMake application when
+the requested configuration changes. To force a full rebuild, use
+`./scripts/build.sh someip rebuild` or
+`.\scripts\build.ps1 -Config someip -Rebuild`.
+
+The publisher sends one 28-byte SOME/IP notification every 5 seconds. Its timestamp
+is Unix epoch time in milliseconds from the existing SNTP service. The board's
+HTS221 is the temperature/humidity sensor; its temperature is measured at the board,
+not by a calibrated cabin-air probe, and can be affected by board heat, enclosure,
+and airflow. Publishing begins after the existing Wi-Fi, DHCP, DNS, and SNTP
+startup completes.
 
 
 ### Networking support
